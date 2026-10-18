@@ -18,7 +18,7 @@ dotnet test DiscountDemo.slnx -c Release
 dotnet run --project src/DiscountDemo --urls http://localhost:5080
 ```
 
-Mở http://localhost:5080. Môi trường Codex dùng SDK riêng tại `../../work/tooling/dotnet/dotnet.exe`; trên máy khác cài .NET SDK 10 hoặc dùng setup-dotnet trong CI.
+Mở http://localhost:5080. Môi trường Codex dùng SDK riêng tại `../../work/tooling/dotnet/dotnet.exe`; chạy `./scripts/Start-Local.ps1` để tự chọn SDK này. Trên máy khác cài .NET SDK 10 hoặc dùng setup-dotnet trong CI.
 
 ## API
 
@@ -46,7 +46,9 @@ Mở http://localhost:5080. Môi trường Codex dùng SDK riêng tại `../../w
 PR vào main chạy job `build-test`. Test thất bại chặn merge khi required status check đã được bật.
 Push main chạy `build-test`, tạo webapp.zip rồi job `deploy-azure` tải artifact và deploy. Job deploy không checkout/build lại code. Website phải trả đúng commit mới ở `/api/version` thì kiểm tra sau deploy mới xanh.
 
-Environment GitHub: `production`, không có required reviewer cho kịch bản tự động deploy. OIDC subject phải khớp `repo:yoyozero10/cicd-dotnet-demo:environment:production`.
+Environment GitHub: `production`, chỉ cho nhánh main triển khai và không có required reviewer cho kịch bản tự động deploy.
+Repo này thực tế phát OIDC subject có ID bất biến: `repo:yoyozero10@143635344/cicd-dotnet-demo@1424172591:environment:production`.
+Federated credential Azure phải khớp chính xác subject, issuer và audience trong log Azure login. Repo khác có thể có subject khác; không sao chép cứng giá trị này khi fork.
 GitHub secrets cần có: `AZURE_CLIENT_ID`, `AZURE_TENANT_ID`, `AZURE_SUBSCRIPTION_ID`. Không dùng client secret hoặc publish profile.
 
 ## Diễn tập bug
