@@ -1,0 +1,77 @@
+# Pipeline đối chiếu. Chạy thủ công, mặc định chỉ Build/Test.
+# Để deploy, tạo service connection azure-seminar-connection và environment seminar-reference.
+trigger: none
+pr: none
+
+parameters:
+  - name: deployToAzure
+    displayName: Deploy to Azure (không chạy đồng thời với GitHub Actions)
+    type: boolean
+    default: false
+
+pool:
+  vmImage: ubuntu-latest
+
+variables:
+  buildConfiguration: Release
+
+stages:
+  - stage: Build
+    displayName: Build and Test
+    jobs:
+      - job: BuildTest
+        steps:
+          - checkout: self
+          - task: UseDotNet@2
+            inputs:
+              packageType: sdk
+              version: '10.0.x'
+          - script: dotnet restore DiscountDemo.slnx --locked-mode
+            displayName: Restore
+          - script: dotnet build DiscountDemo.slnx -c $(buildConfiguration) --no-restore
+            displayName: Build
+          - script: dotnet test DiscountDemo.slnx -c $(buildConfiguration) --no-build --logger trx --results-directory $(Agent.TempDirectory)/TestResults
+            displayName: Test
+          - task: PublishTestResults@2
+            condition: succeededOrFailed()
+            inputs:
+              testResultsFormat: VSTest
+              testResultsFiles: '$(Agent.TempDirectory)/TestResults/*.trx'
+              failTaskOnFailedTests: true
+          - pwsh: |
+              $file = 'src/DiscountDemo/build-info.json'
+              $info = Get-Content $file -Raw | ConvertFrom-Json
+              $info.commit = '$(Build.SourceVersion)'
+              $info.build = 'ado-$(Build.BuildId)'
+              $info | ConvertTo-Json | Set-Content $file -Encoding utf8
+            displayName: Stamp build information
+          - script: dotnet publish src/DiscountDemo/DiscountDemo.csproj -c $(buildConfiguration) --no-restore -o $(Build.ArtifactStagingDirectory)/publish
+            displayName: Publish
+          - task: ArchiveFiles@2
+            inputs:
+              rootFolderOrFile: '$(Build.ArtifactStagingDirectory)/publish'
+              includeRootFolder: false
+              archiveType: zip
+              archiveFile: '$(Build.ArtifactStagingDirectory)/webapp.zip'
+          - publish: $(Build.ArtifactStagingDirectory)/webapp.zip
+            artifact: webapp
+  - ${{ if eq(parameters.deployToAzure, true) }}:
+      - stage: Deploy
+        dependsOn: Build
+        condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/main'))
+        jobs:
+          - deployment: DeployWeb
+            environment: seminar-reference
+            strategy:
+              runOnce:
+                deploy:
+                  steps:
+                    - download: current
+                      artifact: webapp
+                    - task: AzureWebApp@1
+                      inputs:
+                        azureSubscription: azure-seminar-connection
+                        appType: webAppLinux
+                        appName: cicd-demo
+                        package: $(Pipeline.Workspace)/webapp/webapp.zip
+                        runtimeStack: 'DOTNETCORE|10.0'

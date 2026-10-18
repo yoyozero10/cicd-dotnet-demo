@@ -1,0 +1,98 @@
+name: dotnet-ci-cd
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build-test:
+    name: build-test
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: '10.0.x'
+      - name: Restore
+        run: dotnet restore DiscountDemo.slnx --locked-mode
+      - name: Build
+        run: dotnet build DiscountDemo.slnx -c Release --no-restore
+      - name: Test
+        run: dotnet test DiscountDemo.slnx -c Release --no-build --logger trx --results-directory TestResults
+      - name: Save test results
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: test-results
+          path: TestResults/*.trx
+          retention-days: 3
+      - name: Stamp version and commit
+        shell: pwsh
+        run: |
+          $file = 'src/DiscountDemo/build-info.json'
+          $info = Get-Content $file -Raw | ConvertFrom-Json
+          $info.commit = $env:GITHUB_SHA
+          $info.build = $env:GITHUB_RUN_NUMBER
+          $info | ConvertTo-Json | Set-Content $file -Encoding utf8
+      - name: Publish
+        run: dotnet publish src/DiscountDemo/DiscountDemo.csproj -c Release --no-restore -o artifacts/publish
+      - name: Package
+        run: cd artifacts/publish && zip -r ../webapp.zip .
+      - name: Save deployable artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: webapp
+          path: artifacts/webapp.zip
+          retention-days: 3
+
+  deploy:
+    name: deploy-azure
+    needs: build-test
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    concurrency:
+      group: production
+      cancel-in-progress: false
+    environment:
+      name: production
+      url: https://cicd-demo-c8gdcbfegbb9dga4.westus3-01.azurewebsites.net
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/download-artifact@v8
+        with:
+          name: webapp
+          path: artifact
+      - name: Azure login with OIDC
+        uses: azure/login@v3
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+      - name: Deploy artifact
+        uses: azure/webapps-deploy@v3
+        with:
+          app-name: cicd-demo
+          package: artifact/webapp.zip
+      - name: Verify deployed commit
+        env:
+          APP_URL: https://cicd-demo-c8gdcbfegbb9dga4.westus3-01.azurewebsites.net
+        run: |
+          for attempt in $(seq 1 24); do
+            if curl --fail --silent --max-time 20 "$APP_URL/api/version" > version.json && jq -e --arg sha "$GITHUB_SHA" '.commit == $sha' version.json; then
+              curl --fail --silent --max-time 20 "$APP_URL/health"
+              exit 0
+            fi
+            sleep 10
+          done
+          echo 'Website did not report the expected commit.'
+          exit 1

@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Discount Lab · CI/CD .NET</title>
+  <link rel="stylesheet" href="styles.css">
+  <script src="app.js" defer></script>
+</head>
+<body>
+  <header><a class="brand" href="/">Discount Lab</a><span>SEMINAR · CI/CD CHO .NET</span></header>
+  <main>
+    <section class="intro">
+      <p class="eyebrow">GITHUB ACTIONS + AZURE APP SERVICE</p>
+      <h1>Mỗi thay đổi,<br>một phiên bản mới.</h1>
+      <p>Ứng dụng tính giảm giá để quan sát hành trình từ code, kiểm thử đến triển khai trên Azure.</p>
+      <div class="pipeline" aria-label="Các bước pipeline"><span>Code</span><span>Build</span><span>Test</span><span>Deploy</span></div>
+      <aside class="release" aria-live="polite"><span class="dot"></span><div><strong id="version">Đang tải phiên bản…</strong><small id="commit"></small></div></aside>
+    </section>
+    <section class="calculator" aria-labelledby="calculator-title">
+      <p class="eyebrow">THỬ ỨNG DỤNG</p>
+      <h2 id="calculator-title">Tính giá sau giảm</h2>
+      <form id="discount-form">
+        <label for="price">Giá gốc (đồng)</label>
+        <input id="price" name="price" type="number" min="0" step="0.01" value="100000" required>
+        <label for="percent">Giảm giá (%)</label>
+        <input id="percent" name="percent" type="number" min="0" max="100" step="1" value="10" required>
+        <button type="submit">Tính giá</button>
+      </form>
+      <div class="result" role="status" aria-live="polite"><span>Giá thanh toán</span><strong id="total">—</strong><p id="message">Nhập giá và phần trăm giảm để bắt đầu.</p></div>
+    </section>
+  </main>
+  <footer>ASP.NET Core 10 · xUnit · GitHub Actions · Azure Linux F1<span>Build một lần, triển khai từ artifact.</span></footer>
+</body>
+</html>
