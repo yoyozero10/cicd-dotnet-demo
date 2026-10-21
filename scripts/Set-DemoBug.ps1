@@ -11,8 +11,9 @@ if ($Mode -eq 'Introduce') {
     $source = $source.Replace('if (percent > 100)', 'if (percent is < 0 or > 100)')
     $versionFile = Join-Path $projectRoot 'src/DiscountDemo/build-info.json'
     $version = Get-Content $versionFile -Raw | ConvertFrom-Json
-    $version.version = '1.1.0'
+    $version.version = '1.2.0'
     $version | ConvertTo-Json | Set-Content $versionFile -Encoding utf8
 }
 [IO.File]::WriteAllText($file, $source, [Text.UTF8Encoding]::new($false))
 Write-Host "Demo mode: $Mode. Review git diff before committing."
+
