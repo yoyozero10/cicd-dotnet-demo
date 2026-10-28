@@ -54,18 +54,18 @@ GitHub secrets cần có: `AZURE_CLIENT_ID`, `AZURE_TENANT_ID`, `AZURE_SUBSCRIPT
 ## Diễn tập bug
 
 ```powershell
-git switch -c demo/negative-discount
+git switch -c demo/negative-discount-v1.2
 ./scripts/Set-DemoBug.ps1 -Mode Introduce
 dotnet test DiscountDemo.slnx -c Release
 # Mong đợi: 2 test lỗi (unit test và API test cho phần trăm âm).
 git add src/DiscountDemo/PriceCalculator.cs
 git commit -m "demo: introduce missing negative discount validation"
-git push -u origin demo/negative-discount
+git push -u origin demo/negative-discount-v1.2
 # Mở PR vào main, xem check đỏ.
 ./scripts/Set-DemoBug.ps1 -Mode Fix
 dotnet test DiscountDemo.slnx -c Release
 git add src/DiscountDemo/PriceCalculator.cs src/DiscountDemo/build-info.json
-git commit -m "fix: reject negative discounts and release v1.1.0"
+git commit -m "fix: reject negative discounts and release v1.2.0"
 git push
 # Chờ check xanh, merge PR, theo dõi deploy, tải lại website.
 ```
@@ -77,3 +77,4 @@ Không push nhánh demo đang đỏ vào main. Không sửa test để che bug.
 - https://learn.microsoft.com/azure/app-service/deploy-github-actions
 - https://docs.github.com/en/actions/tutorials/build-and-test-code/net
 - https://learn.microsoft.com/azure/devops/pipelines/get-started/pipelines-get-started
+
